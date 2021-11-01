@@ -1,3 +1,3 @@
 
 Link to the task:
-https://drive.google.com/file/d/17iQiK8J1ApRA7vMBPOpGqZtNutQEm0fg/view?usp=sharing
+https://docs.google.com/document/d/e/2PACX-1vS3FhC-akLcDwxQWr2zm2VyIFlnmkagr6YTkVMohBJ7SAuBvdbmjaMw1juZvayoTt8URWPH7ITE_F78/pub

@@ -1,34 +1,67 @@
-import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-
-import { Observable, Subject } from 'rxjs';
-
-import { switchMap, debounceTime, filter, distinct } from 'rxjs/operators';
+import {Component, OnInit, ViewEncapsulation} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable, Subject} from 'rxjs';
+import {debounceTime, distinct, filter, switchMap} from 'rxjs/operators';
+import {FormBuilder, FormGroup} from "@angular/forms";
 
 @Component({
   selector: 'app-search-github',
   templateUrl: './search-github.component.html',
-  styleUrls: ['./search-github.component.scss']
+  styleUrls: ['./search-github.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
-export class SearchGithubComponent {
+export class SearchGithubComponent implements OnInit{
   searchTerm: string;
   results$: Observable<GitHubResults>;
   latestSearch$: Subject<string> = new Subject();
+  isLoadData: boolean = false;
+  resultsData: any[] = null;
+  filters: FormGroup;
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, fb: FormBuilder) {
+    this.filters = fb.group({
+      isOnlyPrivate: false,
+      isOnlyActive: false,
+    });
+
+  }
+
+  ngOnInit(): void {
     this.results$ = this.latestSearch$
-      .pipe(
-        debounceTime(500),
-        filter(searchTerm => !!searchTerm),
-        distinct(),
-        switchMap(searchTerm =>
-          this.http.get<GitHubResults>(`https://api.github.com/search/repositories?q=${searchTerm}`)
-        )
-      );
+    .pipe(
+      debounceTime(500),
+      filter(searchTerm => !!searchTerm),
+      distinct(),
+      switchMap(searchTerm =>
+        this.http.get<GitHubResults>(`https://api.github.com/search/repositories?q=${searchTerm}`)
+      )
+    );
+
+    this.results$
+      .subscribe((res) => {
+        this.isLoadData = false;
+        this.resultsData = res.items;
+      });
+
+    this.filters.valueChanges.subscribe((res) => {
+      this.filterFunc(res);
+    })
   }
 
   searchTermChanged(searchTerm: string): void {
+    this.isLoadData = true;
     this.latestSearch$.next(searchTerm);
+  }
+
+  filterFunc(param: {isOnlyPrivate: boolean, isOnlyActived: boolean}): void {
+    const data = this.resultsData;
+    if(param.isOnlyPrivate) data.filter((f) => f.private === param.isOnlyPrivate);
+    if(param.isOnlyActived) data.filter((f) => f.archived !== param.isOnlyActived);
+    this.resultsData = data;
+
+    this.resultsData.forEach((e) => {
+      console.log(e?.private);
+    });
   }
 }
 

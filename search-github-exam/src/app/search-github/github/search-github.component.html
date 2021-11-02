@@ -30,10 +30,10 @@
               <mat-checkbox formControlName="isOnlyActive">Active</mat-checkbox>
             </p>
           </section>
-        </mat-card-content>
+        </mat-card-content >
       </mat-card>
-      <mat-list>
-        <mat-list-item *ngFor="let repo of resultsData" class="mt-100">
+      <mat-list *ngIf="filteredResults$ | async as results">
+        <mat-list-item *ngFor="let repo of results" class="mt-100">
           <app-item-repo [repo]="repo"></app-item-repo>
         </mat-list-item>
       </mat-list>

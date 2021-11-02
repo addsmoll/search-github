@@ -13,6 +13,7 @@ import {FormBuilder, FormGroup} from "@angular/forms";
 export class SearchGithubComponent implements OnInit{
   searchTerm: string;
   results$: Observable<GitHubResults>;
+  filteredResults$: Subject<any[]> = new Subject();
   latestSearch$: Subject<string> = new Subject();
   isLoadData: boolean = false;
   resultsData: any[] = null;
@@ -41,6 +42,7 @@ export class SearchGithubComponent implements OnInit{
       .subscribe((res) => {
         this.isLoadData = false;
         this.resultsData = res.items;
+        this.filteredResults$.next(res.items);
       });
 
     this.filters.valueChanges.subscribe((res) => {
@@ -54,14 +56,10 @@ export class SearchGithubComponent implements OnInit{
   }
 
   filterFunc(param: {isOnlyPrivate: boolean, isOnlyActived: boolean}): void {
-    const data = this.resultsData;
-    if(param.isOnlyPrivate) data.filter((f) => f.private === param.isOnlyPrivate);
-    if(param.isOnlyActived) data.filter((f) => f.archived !== param.isOnlyActived);
-    this.resultsData = data;
-
-    this.resultsData.forEach((e) => {
-      console.log(e?.private);
-    });
+    let data = this.resultsData;
+    if(param.isOnlyPrivate) data = data.filter((f) => f.private === param.isOnlyPrivate);
+    if(param.isOnlyActived) data = data.filter((f) => f.archived !== param.isOnlyActived);
+    this.filteredResults$.next(data);
   }
 }
 

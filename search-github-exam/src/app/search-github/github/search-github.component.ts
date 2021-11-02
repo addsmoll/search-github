@@ -1,7 +1,7 @@
-import {Component, OnInit, ViewEncapsulation} from '@angular/core';
+import {Component, OnDestroy, OnInit, ViewEncapsulation} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, Subject} from 'rxjs';
-import {debounceTime, distinct, filter, switchMap} from 'rxjs/operators';
+import {debounceTime, distinct, filter, switchMap, takeUntil} from 'rxjs/operators';
 import {FormBuilder, FormGroup} from "@angular/forms";
 
 @Component({
@@ -10,7 +10,7 @@ import {FormBuilder, FormGroup} from "@angular/forms";
   styleUrls: ['./search-github.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class SearchGithubComponent implements OnInit{
+export class SearchGithubComponent implements OnInit, OnDestroy{
   searchTerm: string;
   results$: Observable<GitHubResults>;
   filteredResults$: Subject<any[]> = new Subject();
@@ -19,12 +19,16 @@ export class SearchGithubComponent implements OnInit{
   resultsData: any[] = null;
   filters: FormGroup;
 
+  // Private
+  private _unsubscribeAll: Subject<any>;
+
   constructor(private http: HttpClient, fb: FormBuilder) {
     this.filters = fb.group({
       isOnlyPrivate: false,
-      isOnlyActive: false,
+      isOnlyLanguage: false,
     });
 
+    this._unsubscribeAll = new Subject();
   }
 
   ngOnInit(): void {
@@ -39,15 +43,27 @@ export class SearchGithubComponent implements OnInit{
     );
 
     this.results$
+      .pipe(takeUntil(this._unsubscribeAll))
       .subscribe((res) => {
         this.isLoadData = false;
         this.resultsData = res.items;
         this.filteredResults$.next(res.items);
       });
 
-    this.filters.valueChanges.subscribe((res) => {
-      this.filterFunc(res);
-    })
+    this.filters.get('isOnlyPrivate').valueChanges.subscribe((res) => {
+      let data = this.resultsData;
+      data = data.filter((f) => f.private === res);
+      this.filteredResults$.next(data);
+    });
+
+    this.filters.get('isOnlyLanguage').valueChanges.subscribe((res) => {
+      let data = this.resultsData;
+      if (res) {
+        this.filters.get('isOnlyPrivate').setValue(false);
+        data = data.filter((f) => f.language === 'JavaScript');
+      }
+      this.filteredResults$.next(data);
+    });
   }
 
   searchTermChanged(searchTerm: string): void {
@@ -55,11 +71,9 @@ export class SearchGithubComponent implements OnInit{
     this.latestSearch$.next(searchTerm);
   }
 
-  filterFunc(param: {isOnlyPrivate: boolean, isOnlyActived: boolean}): void {
-    let data = this.resultsData;
-    if(param.isOnlyPrivate) data = data.filter((f) => f.private === param.isOnlyPrivate);
-    if(param.isOnlyActived) data = data.filter((f) => f.archived !== param.isOnlyActived);
-    this.filteredResults$.next(data);
+  ngOnDestroy(): void {
+    this._unsubscribeAll.next();
+    this._unsubscribeAll.complete();
   }
 }
 
